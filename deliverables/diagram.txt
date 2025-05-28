@@ -1,0 +1,15 @@
+graph LR
+    subgraph DockerEnvironment
+        direction LR
+        AppServer[Java App app service <br>Port 8080<br>Log4j Vulnerable/Patched]
+        LDAPServer[Attacker's LDAP Server ldap service<br>Port 389<br>Serves Malicious Reference]
+    end
+
+    User[User/Attacker] -->|1 - Malicious Input<br>e.g., | AppServer
+    AppServer -->|2 - JNDI LDAP Lookup<br>If Log4j is vulnerable| LDAPServer
+    LDAPServer -->|3 - Responds with<br>Malicious Java Class Reference| AppServer
+    AppServer -->|4 - RCE Remote Code Execution<br>If vulnerable & successful| AppServer
+
+    style AppServer fill:#f9f,stroke:#333,stroke-width:2px
+    style LDAPServer fill:#ccf,stroke:#333,stroke-width:2px
+    style User fill:#bbf,stroke:#333,stroke-width:2px
