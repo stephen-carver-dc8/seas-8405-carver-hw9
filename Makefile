@@ -14,7 +14,7 @@ before-reset: before-down after-down
 	@python3 ./before/test.py
 
 before-logs:
-	@$(DOCKER_COMPOSE) --project-directory ./before logs -f
+	@$(DOCKER_COMPOSE) --project-directory ./before logs ldap
 
 after-up: before-down
 	@$(DOCKER_COMPOSE) --project-directory ./after up -d
@@ -28,4 +28,4 @@ after-reset: after-down before-down
 	@python3 ./after/test.py
 
 after-logs:
-	@$(DOCKER_COMPOSE) --project-directory ./after logs -f
+	@$(DOCKER_COMPOSE) --project-directory ./after logs ldap
