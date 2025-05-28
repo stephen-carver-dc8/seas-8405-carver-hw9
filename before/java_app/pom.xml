@@ -45,7 +45,7 @@
       <configuration>
         <archive>
           <manifest>
-            <mainClass>com.example.Log4ShellDemoApplication</mainClass>
+            <mainClass>com.example.LogController</mainClass>
           </manifest>
         </archive>
       </configuration>

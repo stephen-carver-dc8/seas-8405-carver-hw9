@@ -8,12 +8,12 @@ import org.apache.logging.log4j.LogManager;
 
 @SpringBootApplication
 @RestController
-public class Log4ShellDemoApplication {
+public class LogController {
 
-    private static final Logger logger = LogManager.getLogger(Log4ShellDemoApplication.class);
+    private static final Logger logger = LogManager.getLogger(LogController.class);
 
     public static void main(String[] args) {
-        SpringApplication.run(Log4ShellDemoApplication.class, args);
+        SpringApplication.run(LogController.class, args);
     }
 
     @PostMapping("/log")
